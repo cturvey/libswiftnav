@@ -878,8 +878,8 @@ void vec_plus(u8 cols, u8 rows, z_t *v, z_t *Z, z_t mult, u8 column)
     v[i] += Z[i * cols + column] * mult;
   }
 }
-static s8 increment_matrix_product(u8 len, s32 *counter, u8 vlen, z_t *Z,
-                                   z_t *v, s32 *lower_bounds, s32 *upper_bounds) {
+static s8 increment_matrix_product(u8 len, z_t *counter, u8 vlen, z_t *Z,
+                                   z_t *v, z_t *lower_bounds, z_t *upper_bounds) {
   if (memcmp(upper_bounds, counter, len * sizeof(s32)) == 0) {
     /* counter has reached upper_bound, terminate iteration. */
     return 0;
@@ -901,7 +901,7 @@ static s8 increment_matrix_product(u8 len, s32 *counter, u8 vlen, z_t *Z,
   return 1;
 }
 
-bool inside(u32 dim, z_t *point, s32 *lower_bounds, s32 *upper_bounds)
+bool inside(u32 dim, z_t *point, z_t *lower_bounds, z_t *upper_bounds)
 {
   /* Without a slight tolerance, some cases have strange behavior because
    * points on the boundary may not be included; e.g. even with an identity Z
@@ -922,13 +922,13 @@ void init_intersection_count_vector(intersection_count_t *x, hypothesis_t *hyp)
   memcpy(x->counter, x->itr_lower_bounds, x->new_dim * sizeof(s32));
   z_t v0[full_dim];
   /* Map the lower bound vector using Z2_inverse into the second half of v0. */
-  matrix_multiply_i(x->new_dim, x->new_dim, 1, x->Z2_inv, x->counter, v0 + x->old_dim);
+  matrix_multiply_i64(x->new_dim, x->new_dim, 1, x->Z2_inv, x->counter, v0 + x->old_dim);
   /* Map the old hypothesis values identically into the first half of v0. */
   for (u8 i = 0; i < x->old_dim; i++) {
     v0[i] = hyp->N[i];
   }
   /* Decorrelate the joint vector. */
-  matrix_multiply_i(full_dim, full_dim, 1, x->Z1, v0, x->zimage);
+  matrix_multiply_i64(full_dim, full_dim, 1, x->Z1, v0, x->zimage);
 }
 
 void fold_intersection_count(void *arg, element_t *elem)
@@ -950,7 +950,7 @@ void fold_intersection_count(void *arg, element_t *elem)
                   x->itr_lower_bounds, x->itr_upper_bounds));
 }
 
-void round_matrix(u32 rows, u32 cols, const double *A, s32 *B)
+void round_matrix(u32 rows, u32 cols, const double *A, z_t *B)
 {
   for (u8 i=0; i < rows; i++) {
     for (u8 j=0; j < cols; j++) {
@@ -959,7 +959,7 @@ void round_matrix(u32 rows, u32 cols, const double *A, s32 *B)
   }
 }
 
-void round_inverse(u8 dim, const double *Z, s32 *Z_inv)
+void round_inverse(u8 dim, const double *Z, z_t *Z_inv)
 {
   /* Intermediate needed for type correctness */
   double Z_inv_[dim * dim];
@@ -978,7 +978,7 @@ void compute_Z(u8 old_dim, u8 new_dim, const z_t *Z1, const z_t * Z2_inv, z_t *t
   for (u8 i = 0; i < full_dim; i++) {
     memcpy(&Z1_right[i*new_dim], &Z1[i*full_dim + old_dim], new_dim * sizeof(z_t));
   }
-  matrix_multiply_i(full_dim, new_dim, new_dim, Z1_right, Z2_inv, transform);
+  matrix_multiply_i64(full_dim, new_dim, new_dim, Z1_right, Z2_inv, transform);
 }
 
 /* TODO(dsk) Use submatrix for this instead? */
@@ -1307,11 +1307,11 @@ u8 ambiguity_sat_inclusion(ambiguity_test_t *amb_test, const u8 num_dds_in_inter
       row_map, reordering, N_mean_ordered);
 
   /* Initialize intersection struct. */
-  s32 counter[num_addible_dds];
-  s32 lower_bounds1[state_dim];
-  s32 upper_bounds1[state_dim];
-  s32 lower_bounds2[num_addible_dds];
-  s32 upper_bounds2[num_addible_dds];
+  z_t counter[num_addible_dds];
+  z_t lower_bounds1[state_dim];
+  z_t upper_bounds1[state_dim];
+  z_t lower_bounds2[num_addible_dds];
+  z_t upper_bounds2[num_addible_dds];
   z_t zimage[state_dim];
   z_t Z1[state_dim * state_dim];
   z_t Z1_inv[state_dim * state_dim];
@@ -1434,9 +1434,9 @@ u8 ambiguity_sat_inclusion_old(ambiguity_test_t *amb_test, u8 num_dds_in_interse
   }
 
   /* Find the largest set of sats we can add */
-  s32 Z_inv[num_addible_dds * num_addible_dds];
-  s32 lower_bounds[num_addible_dds];
-  s32 upper_bounds[num_addible_dds];
+  z_t Z_inv[num_addible_dds * num_addible_dds];
+  z_t lower_bounds[num_addible_dds];
+  z_t upper_bounds[num_addible_dds];
   u8 num_dds_to_add;
   s8 add_any_sats = determine_sats_addition(amb_test,
                                             addible_float_cov, num_addible_dds, addible_float_mean,
@@ -1454,11 +1454,11 @@ u8 ambiguity_sat_inclusion_old(ambiguity_test_t *amb_test, u8 num_dds_in_interse
   }
 }
 
-u32 float_to_decor(const double *addible_float_cov,
+z_t float_to_decor(const double *addible_float_cov,
                    const double *addible_float_mean,
                    u8 num_addible_dds,
                    u8 num_dds_to_add,
-                   s32 *lower_bounds, s32 *upper_bounds,
+                   z_t *lower_bounds, z_t *upper_bounds,
                    z_t *Z, z_t *Z_inv)
 {
   u8 dim = num_dds_to_add;
@@ -1502,7 +1502,7 @@ u32 float_to_decor(const double *addible_float_cov,
     }
   }
 
-  u32 new_hyp_set_cardinality = 1;
+  u64 new_hyp_set_cardinality = 1;
   for (u8 i=0; i<num_dds_to_add; i++) {
     double search_distance = NUM_SEARCH_STDS * sqrt(decor_float_cov_diag[i]);
     upper_bounds[i] = lround(ceil(decor_float_mean[i] + search_distance));
@@ -1522,7 +1522,7 @@ u32 float_to_decor(const double *addible_float_cov,
 /* TODO(dsk) remove this function. */
 s8 determine_sats_addition(ambiguity_test_t *amb_test,
                            double *float_N_cov, u8 num_float_dds, double *float_N_mean,
-                           s32 *lower_bounds, s32 *upper_bounds, u8 *num_dds_to_add,
+                           z_t *lower_bounds, z_t *upper_bounds, u8 *num_dds_to_add,
                            z_t *Z_inv)
 {
   u8 num_current_dds = CLAMP_DIFF(amb_test->sats.num_sats, 1);
@@ -1770,8 +1770,8 @@ static s8 no_init(void *x, element_t *elem) {
 void add_sats_old(ambiguity_test_t *amb_test,
                   u8 ref_prn,
                   u32 num_added_dds, u8 *added_prns,
-                  s32 *lower_bounds, s32 *upper_bounds,
-                  s32 *Z_inv)
+                  z_t *lower_bounds, z_t *upper_bounds,
+                  z_t *Z_inv)
 {
   /* Make a generator that iterates over the new hypotheses. */
   generate_hypothesis_state_t x0;
