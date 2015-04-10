@@ -141,9 +141,6 @@ START_TEST(test_amb_sat_inclusion)
   u8 dim = 7;
   double cov_mat[state_dim * state_dim];
   double multiplier[state_dim * state_dim];
-  //double multiplierT[state_dim * state_dim];
-  //double a[state_dim * state_dim];
-  //double b[state_dim * state_dim];
   matrix_eye(state_dim, cov_mat);
   double diag = 0.08;
   for (u8 i = 0; i < state_dim; i++) {
@@ -165,6 +162,9 @@ START_TEST(test_amb_sat_inclusion)
   /* Compute a lightly randomized covariance matrix:
    *     multiplier * diag * multiplier^t
    */
+  //double multiplierT[state_dim * state_dim];
+  //double a[state_dim * state_dim];
+  //double b[state_dim * state_dim];
   //matrix_transpose(state_dim, state_dim, multiplier, multiplierT);
   //matrix_multiply(state_dim, state_dim, state_dim, multiplier, cov_mat, a);
   //matrix_multiply(state_dim, state_dim, state_dim, a, multiplierT, b);
