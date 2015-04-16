@@ -212,10 +212,11 @@ START_TEST(test_amb_sat_inclusion)
   printf("inclusion return code: %i\n", flag);
   pool_size = memory_pool_n_allocated(amb_test.pool);
   printf("pool size after 2: %i\n", pool_size);
-  fail_unless(flag == 1);
+  fail_unless(flag == 0);
   /* Include again. This one should fail due to high covariance. */
   flag = ambiguity_sat_inclusion(&amb_test, 0, &float_sats, mean, u, d);
   printf("inclusion return code: %i\n", flag);
+
   pool_size = memory_pool_n_allocated(amb_test.pool);
   printf("pool size after 3: %i\n", pool_size);
   fail_unless(flag == 0);

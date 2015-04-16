@@ -181,8 +181,8 @@ void print_intersection_state(intersection_count_t *x)
   printf("transformation matrix:\n");
   print_Z(68, full_dim, x->new_dim, x->Z);
   printf("z1:\n");
-  print_s64_mtx(x->Z1, full_dim, full_dim);
+  print_Z(0, full_dim, full_dim, x->Z1);
   printf("z2_inv:\n");
-  print_s64_mtx(x->Z2_inv, x->new_dim, x->new_dim);
+  print_Z(0, x->new_dim, x->new_dim, x->Z2_inv);
 }
 

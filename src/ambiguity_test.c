@@ -34,6 +34,13 @@
 #define LOG_PROB_RAT_THRESHOLD -90
 #define SINGLE_OBS_CHISQ_THRESHOLD 20
 
+// TODO delete
+void matrix_multiply_z_t(u32 n, u32 m, u32 p, const z_t *a,
+                         const z_t *b, z_t *c)
+{
+  matrix_multiply_s64(n,m,p,a,b,c);
+}
+
 /** \defgroup ambiguity_test Integer Ambiguity Resolution
  * Integer ambiguity resolution using bayesian hypothesis testing.
  * \{ */
@@ -880,7 +887,7 @@ void vec_plus(u8 cols, u8 rows, z_t *v, z_t *Z, z_t mult, u8 column)
 }
 static s8 increment_matrix_product(u8 len, z_t *counter, u8 vlen, z_t *Z,
                                    z_t *v, z_t *lower_bounds, z_t *upper_bounds) {
-  if (memcmp(upper_bounds, counter, len * sizeof(s32)) == 0) {
+  if (memcmp(upper_bounds, counter, len * sizeof(z_t)) == 0) {
     /* counter has reached upper_bound, terminate iteration. */
     return 0;
   }
@@ -919,16 +926,16 @@ void init_intersection_count_vector(intersection_count_t *x, hypothesis_t *hyp)
 {
   u8 full_dim = x->old_dim + x->new_dim;
   /* Initialize counter using lower bounds. */
-  memcpy(x->counter, x->itr_lower_bounds, x->new_dim * sizeof(s32));
+  memcpy(x->counter, x->itr_lower_bounds, x->new_dim * sizeof(z_t));
   z_t v0[full_dim];
   /* Map the lower bound vector using Z2_inverse into the second half of v0. */
-  matrix_multiply_i64(x->new_dim, x->new_dim, 1, x->Z2_inv, x->counter, v0 + x->old_dim);
+  matrix_multiply_z_t(x->new_dim, x->new_dim, 1, x->Z2_inv, x->counter, v0 + x->old_dim);
   /* Map the old hypothesis values identically into the first half of v0. */
   for (u8 i = 0; i < x->old_dim; i++) {
     v0[i] = hyp->N[i];
   }
   /* Decorrelate the joint vector. */
-  matrix_multiply_i64(full_dim, full_dim, 1, x->Z1, v0, x->zimage);
+  matrix_multiply_z_t(full_dim, full_dim, 1, x->Z1, v0, x->zimage);
 }
 
 void fold_intersection_count(void *arg, element_t *elem)
@@ -978,7 +985,7 @@ void compute_Z(u8 old_dim, u8 new_dim, const z_t *Z1, const z_t * Z2_inv, z_t *t
   for (u8 i = 0; i < full_dim; i++) {
     memcpy(&Z1_right[i*new_dim], &Z1[i*full_dim + old_dim], new_dim * sizeof(z_t));
   }
-  matrix_multiply_i64(full_dim, new_dim, new_dim, Z1_right, Z2_inv, transform);
+  matrix_multiply_z_t(full_dim, new_dim, new_dim, Z1_right, Z2_inv, transform);
 }
 
 /* TODO(dsk) Use submatrix for this instead? */
@@ -1164,6 +1171,7 @@ static u8 inclusion_loop_body(
         state_dim, full_dim,
         x->box_lower_bounds, x->box_upper_bounds, x->Z1, x->Z1_inv);
 
+
   /* Useful for debugging. */
   *full_size_return = full_size;
 
@@ -1173,6 +1181,9 @@ static u8 inclusion_loop_body(
       x->itr_lower_bounds, x->itr_upper_bounds, x->Z2, x->Z2_inv);
 
   compute_Z(num_current_dds, num_dds_to_add, x->Z1, x->Z2_inv, x->Z);
+
+  //print_Z(0, full_dim, x->new_dim, x->Z);
+  //print_intersection_state(x);
 
   if (full_size <= max_num_hyps) {
     log_debug("BRANCH 1: num dds: %i. full size: %"PRIu32", itr size: %"PRIu32"\n", num_dds_to_add, full_size, box_size);
@@ -1674,14 +1685,14 @@ u8 find_indices_of_intersection_sats(const ambiguity_test_t *amb_test, const u8 
 
 /* TODO(dsk) remove dead code. */
 typedef struct {
-  s32 upper_bounds[MAX_CHANNELS-1];
-  s32 lower_bounds[MAX_CHANNELS-1];
-  s32 counter[MAX_CHANNELS-1];
+  z_t upper_bounds[MAX_CHANNELS-1];
+  z_t lower_bounds[MAX_CHANNELS-1];
+  z_t counter[MAX_CHANNELS-1];
   u8 ndxs_of_old_in_new[MAX_CHANNELS-1];
   u8 ndxs_of_added_in_new[MAX_CHANNELS-1];
   u8 num_added_dds;
   u8 num_old_dds;
-  s32 Z_inv[(MAX_CHANNELS-1) * (MAX_CHANNELS-1)];
+  z_t Z_inv[(MAX_CHANNELS-1) * (MAX_CHANNELS-1)];
 } generate_hypothesis_state_t;
 
 s8 generate_next_hypothesis(void *x_, u32 n)
@@ -1689,7 +1700,7 @@ s8 generate_next_hypothesis(void *x_, u32 n)
   (void) n;
   generate_hypothesis_state_t *x = (generate_hypothesis_state_t *)x_;
 
-  if (memcmp(x->upper_bounds, x->counter, x->num_added_dds * sizeof(s32)) == 0) {
+  if (memcmp(x->upper_bounds, x->counter, x->num_added_dds * sizeof(z_t)) == 0) {
     /* counter has reached upper_bound, terminate iteration. */
     return 0;
   }
@@ -1720,7 +1731,7 @@ void hypothesis_prod(element_t *new_, void *x_, u32 n, element_t *elem_)
   u8 *ndxs_of_added_in_new = x->ndxs_of_added_in_new;
 
   s32 old_N[MAX_CHANNELS-1];
-  memcpy(old_N, new->N, x->num_old_dds * sizeof(s32));
+  memcpy(old_N, new->N, x->num_old_dds * sizeof(z_t));
 
   for (u8 i=0; i < x->num_old_dds; i++) {
     new->N[ndxs_of_old_in_new[i]] = old_N[i];
@@ -1728,7 +1739,7 @@ void hypothesis_prod(element_t *new_, void *x_, u32 n, element_t *elem_)
   for (u8 i=0; i<x->num_added_dds; i++) {
     new->N[ndxs_of_added_in_new[i]] = 0;
     for (u8 j=0; j<x->num_added_dds; j++) {
-      new->N[ndxs_of_added_in_new[i]] += x->Z_inv[i*x->num_added_dds + j] * x->counter[j];
+      new->N[ndxs_of_added_in_new[i]] += lround(x->Z_inv[i*x->num_added_dds + j] * x->counter[j]);
     }
   }
 
@@ -1760,6 +1771,7 @@ void recorrelate_added_sats(void *arg, element_t *elem_)
     }
   }
   memcpy(&elem->N[params->num_old_dds], recorrelated_N, params->num_added_dds * sizeof(s32));
+
 }
 
 /* TODO(dsk) remove dead code. */
@@ -1775,9 +1787,9 @@ void add_sats_old(ambiguity_test_t *amb_test,
 {
   /* Make a generator that iterates over the new hypotheses. */
   generate_hypothesis_state_t x0;
-  memcpy(x0.upper_bounds, upper_bounds, num_added_dds * sizeof(s32));
-  memcpy(x0.lower_bounds, lower_bounds, num_added_dds * sizeof(s32));
-  memcpy(x0.counter, lower_bounds, num_added_dds * sizeof(s32));
+  memcpy(x0.upper_bounds, upper_bounds, num_added_dds * sizeof(z_t));
+  memcpy(x0.lower_bounds, lower_bounds, num_added_dds * sizeof(z_t));
+  memcpy(x0.counter, lower_bounds, num_added_dds * sizeof(z_t));
 
   x0.num_added_dds = num_added_dds;
   x0.num_old_dds = CLAMP_DIFF(amb_test->sats.num_sats, 1);
@@ -1828,7 +1840,7 @@ void add_sats_old(ambiguity_test_t *amb_test,
   if (DEBUG) {
     memory_pool_map(amb_test->pool, &x0.num_old_dds, &print_hyp);
   }
-  memcpy(x0.Z_inv, Z_inv, num_added_dds * num_added_dds * sizeof(s32));
+  memcpy(x0.Z_inv, Z_inv, num_added_dds * num_added_dds * sizeof(z_t));
   /* Take the product of our current hypothesis state with the generator, recorrelating the new ones as we go. */
   memory_pool_product_generator(amb_test->pool, &x0, MAX_HYPOTHESES, sizeof(x0),
                                 &no_init, &generate_next_hypothesis, &hypothesis_prod);

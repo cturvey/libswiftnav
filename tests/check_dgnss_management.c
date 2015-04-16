@@ -235,7 +235,7 @@ START_TEST(test_dgnss_low_latency_IAR_baseline_ref_first) {
   memset(upper, 0, sizeof(z_t) * 4);
 
   z_t Z_inv[16];
-  matrix_eye_s64(4, Z_inv);
+  matrix_eye(4, Z_inv);
 
   add_sats_old(&ambiguity_test,
            1,
@@ -280,7 +280,7 @@ START_TEST(test_dgnss_low_latency_IAR_baseline_ref_middle) {
   memset(upper, 0, sizeof(z_t) * 4);
 
   z_t Z_inv[16];
-  matrix_eye_s64(4, Z_inv);
+  matrix_eye(4, Z_inv);
 
   add_sats_old(&ambiguity_test,
            ref_prn,
@@ -325,7 +325,7 @@ START_TEST(test_dgnss_low_latency_IAR_baseline_ref_end) {
   memset(upper, 0, sizeof(z_t) * 4);
 
   z_t Z_inv[16];
-  matrix_eye_s64(4, Z_inv);
+  matrix_eye(4, Z_inv);
 
   add_sats_old(&ambiguity_test,
            ref_prn,
@@ -370,7 +370,7 @@ START_TEST(test_dgnss_low_latency_IAR_baseline_fixed_point) {
   memset(upper, 0, sizeof(z_t) * 4);
 
   z_t Z_inv[16];
-  matrix_eye_s64(4, Z_inv);
+  matrix_eye(4, Z_inv);
 
   add_sats_old(&ambiguity_test,
            ref_prn,

@@ -630,7 +630,7 @@ inline void matrix_multiply_i(u32 n, u32 m, u32 p, const s32 *a,
     }
 }
 
-inline void matrix_multiply_i64(u32 n, u32 m, u32 p, const s64 *a,
+inline void matrix_multiply_s64(u32 n, u32 m, u32 p, const s64 *a,
                                 const s64 *b, s64 *c)
 {
   u32 i, j, k;
